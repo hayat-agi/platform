@@ -1,0 +1,189 @@
+{
+  "version": "1.0",
+  "description": "Hayat Agi triage system - canonical schema for 3-head multi-task BERTurk model and fusion layer. This is the single source of truth - all bootstrap, training, and fusion code reads from here.",
+
+  "head_a_message_type": {
+    "task_type": "single_label",
+    "loss": "softmax_crossentropy",
+    "labels": [
+      {
+        "code": "SELF_REPORT",
+        "label_tr": "Kendi durumu",
+        "description": "Sender is the patient/affected person. 'Enkaz altindayim', 'bacagim kirildi', 'evimizde mahsur kaldik'."
+      },
+      {
+        "code": "WITNESS_REPORT",
+        "label_tr": "Tanik raporu",
+        "description": "Sender observes others. 'Karsi binadan sesler geliyor', 'arkadasim enkaz altinda', 'sokakta yaralı bir adam gordüm'."
+      },
+      {
+        "code": "INFO",
+        "label_tr": "Bilgi/durum",
+        "description": "General situational info, not a personal SOS. 'Ataturk Cad. tamamen kapali', 'bu sokakta hasar yok', 'gaz kesildi'."
+      }
+    ]
+  },
+
+  "head_b_urgency": {
+    "task_type": "single_label",
+    "loss": "focal_loss_softmax",
+    "labels": [
+      {
+        "code": "CRITICAL",
+        "label_tr": "Hayati tehlike",
+        "score": 4,
+        "description": "Life-threatening, immediate dispatch required. Bleeding, breathing failure, trapped + injured.",
+        "examples": ["nefes alamiyorum", "kan kaybediyorum", "enkaz altindayim bacagim kirildi"]
+      },
+      {
+        "code": "HIGH",
+        "label_tr": "Yuksek",
+        "score": 3,
+        "description": "Serious, cannot be delayed. Trapped without injury, fire nearby, hazmat.",
+        "examples": ["sikistim cikamiyorum", "binadan duman cikiyor", "gaz kokusu var"]
+      },
+      {
+        "code": "MEDIUM",
+        "label_tr": "Orta",
+        "score": 2,
+        "description": "Help needed but not immediately life-threatening.",
+        "examples": ["kolum kirildi yuruyebiliyorum", "su lazim", "elektrik yok"]
+      },
+      {
+        "code": "LOW",
+        "label_tr": "Dusuk",
+        "score": 1,
+        "description": "Informational, no urgent action.",
+        "examples": ["evimdeyim guvendeyim", "yol kapali", "duruma raporluyorum"]
+      }
+    ]
+  },
+
+  "head_c_emergency_category": {
+    "task_type": "multi_label",
+    "loss": "asymmetric_focal_bce",
+    "threshold_default": 0.5,
+    "labels": [
+      {
+        "code": "MEDICAL_RESCUE",
+        "label_tr": "Saglik / Kurtarma",
+        "description": "Injury, trapped person, structural collapse with people inside. AFAD USAR doctrine merges medical and structural extraction.",
+        "examples": ["enkaz altindayim", "bacagi kirilmis komsumuz", "binada mahsur kaldik"],
+        "team_routing": ["AFAD_USAR", "AMBULANS_112"],
+        "threshold": 0.5
+      },
+      {
+        "code": "FIRE",
+        "label_tr": "Yangin",
+        "description": "Active fire, flames, smoke from burning.",
+        "examples": ["bina yaniyor", "alev yukseliyor", "duman cok yogun"],
+        "team_routing": ["ITFAIYE"],
+        "threshold": 0.5
+      },
+      {
+        "code": "HAZMAT",
+        "label_tr": "Tehlikeli madde",
+        "description": "Gas leak, chemical spill, suspected hazmat. Lower threshold - missing this is dangerous.",
+        "examples": ["gaz kokusu cok yogun", "kimyasal sızıntı var", "yakitlar akiyor"],
+        "team_routing": ["ITFAIYE_HAZMAT"],
+        "threshold": 0.4
+      },
+      {
+        "code": "ELECTRICAL",
+        "label_tr": "Elektrik tehlikesi",
+        "description": "Fallen power lines, transformer issues, electrical hazard.",
+        "examples": ["elektrik telleri yere dustu", "trafo patladi", "kablolar acikta"],
+        "team_routing": ["ELEKTRIK_DAGITIM"],
+        "threshold": 0.5
+      },
+      {
+        "code": "WATER",
+        "label_tr": "Su / Kanalizasyon",
+        "description": "Burst pipe, flooding, sewage, drinking water contamination. NOT general resource request for water.",
+        "examples": ["su borusu patladi", "sokak su altinda", "kanalizasyon tasti"],
+        "team_routing": ["SU_KANALIZASYON"],
+        "threshold": 0.5
+      },
+      {
+        "code": "SECURITY",
+        "label_tr": "Guvenlik",
+        "description": "Looting, theft, assault. Requires K-of-N corroboration + human dispatcher confirmation before police dispatch.",
+        "examples": ["magazalari yagmaliyorlar", "saldiri var", "hirsizlik"],
+        "team_routing": ["POLIS", "JANDARMA"],
+        "threshold": 0.6,
+        "requires_corroboration": true,
+        "requires_human_confirmation": true
+      },
+      {
+        "code": "MISSING_PERSON",
+        "label_tr": "Kayip",
+        "description": "Missing person reports, families searching for relatives. Documented as #1 volume category in 2023 Kahramanmaras.",
+        "examples": ["babam kayip 3 gundur", "annemi ariyorum", "ulasamiyorum"],
+        "team_routing": ["AFAD_KAYIP", "POLIS_155"],
+        "threshold": 0.5
+      },
+      {
+        "code": "CHILD_UNACCOMPANIED",
+        "label_tr": "Refakatsiz cocuk",
+        "description": "Child without adult caregiver. Separate from MISSING_PERSON because of dedicated UNICEF/Aile Bakanligi channel.",
+        "examples": ["yaninda ailesi olmayan cocuk var", "cocuk tek basina kaldi"],
+        "team_routing": ["AILE_BAKANLIGI", "UNICEF_TRACING"],
+        "threshold": 0.45
+      },
+      {
+        "code": "RESOURCE_REQUEST",
+        "label_tr": "Ihtiyac talebi",
+        "description": "Need for food, water, blankets, baby formula, medicine, heating. AHBAP's primary workload in 2023.",
+        "examples": ["su bitti", "battaniye lazim", "bebek mamasi yok", "isinma yok"],
+        "team_routing": ["KIZILAY", "AHBAP_LOJISTIK"],
+        "threshold": 0.5
+      },
+      {
+        "code": "SHELTER",
+        "label_tr": "Barinma",
+        "description": "Tent, shelter, housing need. Distinct dispatch from RESOURCE_REQUEST.",
+        "examples": ["cadir lazim", "barinacak yerimiz yok", "evlerimiz yikildi"],
+        "team_routing": ["KIZILAY_BARINMA"],
+        "threshold": 0.5
+      },
+      {
+        "code": "GENERAL",
+        "label_tr": "Genel / Lojistik",
+        "description": "Catch-all for status updates, road conditions, general info that doesn't fit other categories.",
+        "examples": ["yol kapali", "kopru gecilemez", "sokak guvenli"],
+        "team_routing": ["KOORDINASYON_MERKEZI"],
+        "threshold": 0.5
+      }
+    ]
+  },
+
+  "incident_scoring": {
+    "formula": "max_urgency_score * confirmation_multiplier + log(message_count) * 0.5 + vulnerable_group_bonus + hazard_bonus",
+    "confirmation_multipliers": {
+      "CONFIRMED": 1.5,
+      "LIKELY": 1.2,
+      "UNCONFIRMED": 1.0,
+      "UNVERIFIED": 0.8
+    },
+    "vulnerable_group_bonus": {
+      "child_present": 1.0,
+      "elderly_present": 0.7,
+      "pregnant_present": 1.0,
+      "disabled_present": 0.7
+    },
+    "hazard_bonus": {
+      "HAZMAT": 1.0,
+      "FIRE": 0.7,
+      "ELECTRICAL": 0.5
+    }
+  },
+
+  "team_dispatch_sequence": {
+    "description": "Real-world dispatch is sequential not parallel. Hazmat secures scene first, then rescue enters, then medical extraction.",
+    "ordering_rules": [
+      {"if_present": "HAZMAT", "must_precede": ["MEDICAL_RESCUE", "FIRE"], "reason": "gas/chem must be secured before rescue entry"},
+      {"if_present": "ELECTRICAL", "must_precede": ["MEDICAL_RESCUE", "WATER"], "reason": "electrocution risk - power off first"},
+      {"if_present": "FIRE", "must_precede": ["MEDICAL_RESCUE"], "reason": "fire suppression before extraction"}
+    ]
+  }
+}

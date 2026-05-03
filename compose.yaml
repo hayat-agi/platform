@@ -45,5 +45,20 @@ services:
       retries: 5
       start_period: 30s
 
+  fusion-forwarder:
+    build:
+      context: ./forwarder
+    container_name: hayat-agi-fusion-forwarder
+    restart: unless-stopped
+    environment:
+      MONGO_URI: mongodb://mongo:27017/hayat-agi
+      AI_FUSION_URL: http://ai-fusion:8000
+      POLL_INTERVAL_MS: ${FORWARDER_POLL_MS:-5000}
+    depends_on:
+      mongo:
+        condition: service_healthy
+      ai-fusion:
+        condition: service_healthy
+
 volumes:
   mongo-data:

@@ -11,6 +11,7 @@
 
 import { MongoClient } from "mongodb";
 import "dotenv/config";
+import { alertToIngestPayload } from "./transform.js";
 
 const MONGO_URI = process.env.MONGO_URI ?? "mongodb://localhost:27017/hayat-agi";
 const AI_FUSION_URL = process.env.AI_FUSION_URL ?? "http://localhost:8000";
@@ -26,11 +27,11 @@ async function pollOnce(alerts) {
 
   let processed = 0;
   for await (const alert of cursor) {
-    // TODO: transform Alert → IngestPayload (next commit)
+    const payload = alertToIngestPayload(alert);
     // TODO: POST to ${AI_FUSION_URL}/ingest (next commit)
     // TODO: write classification + incident back to Alert (next commit)
     processed += 1;
-    console.log(`[forwarder] would forward alert ${alert._id} (not yet implemented)`);
+    console.log(`[forwarder] prepared payload for alert ${alert._id} (gateway=${payload.gateway_id})`);
   }
   return processed;
 }

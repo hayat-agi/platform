@@ -11,7 +11,7 @@
 
 import { MongoClient } from "mongodb";
 import "dotenv/config";
-import { alertToIngestPayload } from "./transform.js";
+import { alertToIngestPayload, ingestResponseToAlertUpdate } from "./transform.js";
 
 const MONGO_URI = process.env.MONGO_URI ?? "mongodb://localhost:27017/hayat-agi";
 const AI_FUSION_URL = process.env.AI_FUSION_URL ?? "http://localhost:8000";
@@ -20,19 +20,45 @@ const BATCH_SIZE = Number(process.env.BATCH_SIZE ?? 25);
 
 const client = new MongoClient(MONGO_URI);
 
+async function postToFusion(payload) {
+  const res = await fetch(`${AI_FUSION_URL}/ingest`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(10_000),
+  });
+  if (!res.ok) {
+    throw new Error(`ai-fusion /ingest returned ${res.status}: ${await res.text()}`);
+  }
+  return res.json();
+}
+
+async function processAlert(alerts, alert) {
+  const payload = alertToIngestPayload(alert);
+  const response = await postToFusion(payload);
+  const update = ingestResponseToAlertUpdate(response);
+  await alerts.updateOne({ _id: alert._id }, { $set: update });
+  return response.incident_id;
+}
+
 async function pollOnce(alerts) {
   const cursor = alerts
     .find({ "classification.classified_at": null })
     .limit(BATCH_SIZE);
 
   let processed = 0;
+  let failed = 0;
   for await (const alert of cursor) {
-    const payload = alertToIngestPayload(alert);
-    // TODO: POST to ${AI_FUSION_URL}/ingest (next commit)
-    // TODO: write classification + incident back to Alert (next commit)
-    processed += 1;
-    console.log(`[forwarder] prepared payload for alert ${alert._id} (gateway=${payload.gateway_id})`);
+    try {
+      const incidentId = await processAlert(alerts, alert);
+      processed += 1;
+      console.log(`[forwarder] alert ${alert._id} -> incident ${incidentId}`);
+    } catch (err) {
+      failed += 1;
+      console.error(`[forwarder] alert ${alert._id} failed:`, err.message);
+    }
   }
+  if (failed > 0) console.warn(`[forwarder] ${failed} alerts failed this round`);
   return processed;
 }
 

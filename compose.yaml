@@ -1,0 +1,28 @@
+# Hayat Ağı local dev stack
+#
+# Usage:
+#   cp .env.example .env
+#   docker compose up
+#
+# Services are added incrementally. See compose-services-status.md for what's
+# wired and what's still planned.
+
+services:
+  mongo:
+    image: mongo:7
+    container_name: hayat-agi-mongo
+    restart: unless-stopped
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    environment:
+      MONGO_INITDB_DATABASE: hayat-agi
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ping:1}).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mongo-data:

@@ -11,7 +11,7 @@ This repo holds the cross-cutting pieces that don't belong to any single compone
 | [`ai`](https://github.com/hayat-agi/ai) | Python, FastAPI, PyTorch, BERTurk | 3-head Turkish classifier + incident clustering + scoring |
 | [`mobile`](https://github.com/hayat-agi/mobile) | Flutter, Dart | Citizen app, BLE peripheral client, disaster mode |
 | [`command-center`](https://github.com/hayat-agi/command-center) | Node/Express + MongoDB + React/Vite | Web admin & citizen panel, gateway management, live map |
-| [`firmware`](https://github.com/hayat-agi/firmware) *(pending)* | Arduino / ESP-IDF | ESP32 + LoRa long-range backhaul |
+| [`mesh-core`](https://github.com/hayat-agi/mesh-core) | Arduino / ESP32 + EByte SX1262 | LoRa mesh routing protocol — long-range backhaul |
 | [`platform`](https://github.com/hayat-agi/platform) | this repo | Glue: schema, compose, forwarder, e2e, deploy |
 
 ## Status

@@ -32,12 +32,24 @@ services:
     ports:
       - "${AI_FUSION_PORT:-8000}:8000"
     environment:
-      CLASSIFIER_MOCK: "true"
+      # Defaults to real classifier; set CLASSIFIER_MOCK=true in .env for
+      # fast dev iteration without HF Hub download.
+      CLASSIFIER_MOCK: ${CLASSIFIER_MOCK:-false}
+      # HF Hub model distribution. If HF_MODEL_REPO is empty AND no local
+      # MODEL_PATH file is mounted, the service falls back to mock with a
+      # warning (see ai/hayat-agi-fusion/app/model_loader.py).
+      HF_MODEL_REPO: ${HF_MODEL_REPO:-}
+      HF_MODEL_FILENAME: ${HF_MODEL_FILENAME:-multitask_v3.pt}
+      HF_MODEL_REVISION: ${HF_MODEL_REVISION:-main}
+      HF_TOKEN: ${HF_TOKEN:-}
+      HF_HOME: /model-cache
       SCHEMA_PATH: /app/schemas/category_schema.json
     volumes:
       # Mount the canonical schema from this repo so ai-fusion always uses
       # the platform-vendored copy as the single source of truth.
       - ./schema/category_schema.json:/app/schemas/category_schema.json:ro
+      # Cache HF Hub downloads so the 442 MB model is fetched once per host.
+      - model-cache:/model-cache
     healthcheck:
       test: ["CMD-SHELL", "python -c 'import urllib.request,sys; sys.exit(0 if urllib.request.urlopen(\"http://localhost:8000/healthz\").status==200 else 1)'"]
       interval: 15s
@@ -62,3 +74,4 @@ services:
 
 volumes:
   mongo-data:
+  model-cache:

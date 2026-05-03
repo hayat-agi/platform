@@ -11,8 +11,15 @@
 export function alertToIngestPayload(alert) {
   const messageId = String(alert._id);
   const text = alert.text ?? alert.payload?.message ?? "";
-  const sentAt = alert.payload?.sentAt ?? alert.createdAt ?? new Date();
-  const receivedAt = sentAt instanceof Date ? sentAt.toISOString() : new Date(sentAt).toISOString();
+  // received_at = the time the *backend* accepted the alert (alert.createdAt).
+  // We deliberately ignore alert.payload.sentAt because clients send it in
+  // wildly different shapes — phones send ISO strings, the gateway firmware
+  // sends a millis-since-boot integer-as-string ("3500") which Date()
+  // parses as year 3500. Backend receipt time is the only meaningful
+  // cross-device wall-clock anyway.
+  const receivedAt = (alert.createdAt instanceof Date
+    ? alert.createdAt
+    : new Date(alert.createdAt ?? Date.now())).toISOString();
   const gatewayId = alert.gateway != null ? String(alert.gateway) : (alert.device_id ?? "unknown");
   const lat = alert.location?.lat ?? 0;
   const lng = alert.location?.lng ?? 0;

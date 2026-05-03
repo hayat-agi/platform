@@ -15,15 +15,18 @@ import { alertToIngestPayload, ingestResponseToAlertUpdate } from "./transform.j
 
 const MONGO_URI = process.env.MONGO_URI ?? "mongodb://localhost:27017/hayat-agi";
 const AI_FUSION_URL = process.env.AI_FUSION_URL ?? "http://localhost:8000";
+const FUSION_INGEST_TOKEN = process.env.FUSION_INGEST_TOKEN ?? "";
 const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? 5000);
 const BATCH_SIZE = Number(process.env.BATCH_SIZE ?? 25);
 
 const client = new MongoClient(MONGO_URI);
 
 async function postToFusion(payload) {
+  const headers = { "Content-Type": "application/json" };
+  if (FUSION_INGEST_TOKEN) headers["Authorization"] = `Bearer ${FUSION_INGEST_TOKEN}`;
   const res = await fetch(`${AI_FUSION_URL}/ingest`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers,
     body: JSON.stringify(payload),
     signal: AbortSignal.timeout(10_000),
   });

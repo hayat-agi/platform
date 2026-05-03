@@ -44,6 +44,7 @@ services:
       HF_TOKEN: ${HF_TOKEN:-}
       HF_HOME: /model-cache
       SCHEMA_PATH: /app/schemas/category_schema.json
+      FUSION_INGEST_TOKEN: ${FUSION_INGEST_TOKEN:-}
     volumes:
       # Mount the canonical schema from this repo so ai-fusion always uses
       # the platform-vendored copy as the single source of truth.
@@ -65,6 +66,7 @@ services:
     environment:
       MONGO_URI: mongodb://mongo:27017/hayat-agi
       AI_FUSION_URL: http://ai-fusion:8000
+      FUSION_INGEST_TOKEN: ${FUSION_INGEST_TOKEN:-}
       POLL_INTERVAL_MS: ${FORWARDER_POLL_MS:-5000}
     depends_on:
       mongo:
@@ -81,9 +83,10 @@ services:
       - "${BACKEND_PORT:-5000}:5000"
     environment:
       MONGO_URI: mongodb://mongo:27017/hayat-agi
-      JWT_SECRET: ${JWT_SECRET:-devsecret}
+      JWT_SECRET: ${JWT_SECRET}
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:5173}
       AI_FUSION_URL: http://ai-fusion:8000
+      FUSION_INGEST_TOKEN: ${FUSION_INGEST_TOKEN:-}
       PORT: 5000
     depends_on:
       mongo:

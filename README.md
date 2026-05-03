@@ -24,4 +24,4 @@ Local-dev orchestration is being set up. Once `docker-compose.yml` lands, a sing
 
 ## Team
 
-Berkay Aktaş · Alin Kısakürek · Arzu · Berat
+Berkay Aktaş · Alin Kısakürek · Arzu Tuğçe Koca · Berat Mert Gökkaya

@@ -21,18 +21,16 @@ Resolution order in [`app/model_loader.py`](https://github.com/hayat-agi/ai/blob
 
 ## One-time setup
 
-1. **Create the HF Hub repo** (private):
+1. **Create the HF Hub repo** (private). Using the modern `hf` CLI (the older `huggingface-cli` also works):
    ```bash
-   huggingface-cli login                # paste a write token
-   huggingface-cli repo create hayat-agi/classifier --type model --private
+   hf auth login                        # paste a write token
+   hf repo create hayat-agi/classifier --repo-type model --private
    ```
 
 2. **Upload the current model** (run once from wherever your `.pt` lives):
    ```bash
-   huggingface-cli upload hayat-agi/classifier \
-     multitask_v3.pt multitask_v3.pt
-   huggingface-cli upload hayat-agi/classifier \
-     multitask_v3.json multitask_v3.json
+   hf upload hayat-agi/classifier multitask_v3.pt  multitask_v3.pt
+   hf upload hayat-agi/classifier multitask_v3.json multitask_v3.json
    ```
 
 3. **Distribute a read token** to teammates: `https://huggingface.co/settings/tokens` → New token → "read" scope → copy. Each teammate puts it in their local `.env`:
@@ -50,8 +48,8 @@ After a Colab retrain produces `multitask_v4.pt` + `multitask_v4.json`:
 
 ```bash
 # 1. Upload the new files (keeps v3 on Hub for rollback)
-huggingface-cli upload hayat-agi/classifier multitask_v4.pt  multitask_v4.pt
-huggingface-cli upload hayat-agi/classifier multitask_v4.json multitask_v4.json
+hf upload hayat-agi/classifier multitask_v4.pt  multitask_v4.pt
+hf upload hayat-agi/classifier multitask_v4.json multitask_v4.json
 
 # 2. Bump the env var (in your local .env, or wherever the prod env lives)
 HF_MODEL_FILENAME=multitask_v4.pt
@@ -77,7 +75,7 @@ Instead of file-name versioning you can use HF Hub git revisions:
 
 ```bash
 # After upload, tag the commit
-huggingface-cli repo tag hayat-agi/classifier v4 --revision main
+hf repo tag hayat-agi/classifier v4 --revision main
 ```
 
 ```ini

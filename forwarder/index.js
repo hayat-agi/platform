@@ -74,7 +74,7 @@ async function processAlert(alerts, users, alert) {
   const healthProfile = await resolveHealthProfile(users, alert);
   const payload = alertToIngestPayload(alert, healthProfile);
   const response = await postToFusion(payload);
-  const update = ingestResponseToAlertUpdate(response);
+  const update = ingestResponseToAlertUpdate(response, healthProfile);
   await alerts.updateOne({ _id: alert._id }, { $set: update });
   return response.incident_id;
 }

@@ -54,13 +54,16 @@ const URGENCY_TO_SEVERITY = {
  * doc for which fields don't have a clean equivalent.
  *
  * @param {object} ingestResponse  Body returned by POST /ingest.
- * @returns {{ classification: object, incident: string }}
+ * @param {object|null} healthProfile  The snapshot we sent up with the
+ *   payload — we echo it back into the Alert so the audit trail survives
+ *   user-profile edits AND fusion in-memory wipes.
+ * @returns {{ classification: object, incident: string, healthProfile?: object, healthRiskFactors?: array }}
  */
-export function ingestResponseToAlertUpdate(ingestResponse) {
+export function ingestResponseToAlertUpdate(ingestResponse, healthProfile = null) {
   const c = ingestResponse.classification ?? {};
   const categories = ingestResponse.incident_categories ?? c.categories ?? [];
   const classifiedAt = c.classified_at ? new Date(c.classified_at) : new Date();
-  return {
+  const update = {
     incident: ingestResponse.incident_id,
     classification: {
       emergency_category: categories[0] ?? "GENERAL",
@@ -70,4 +73,12 @@ export function ingestResponseToAlertUpdate(ingestResponse) {
       classified_at: classifiedAt,
     },
   };
+  if (healthProfile) {
+    update.healthProfile = healthProfile;
+  }
+  const factors = ingestResponse.event_health_risk_factors;
+  if (Array.isArray(factors) && factors.length > 0) {
+    update.healthRiskFactors = factors;
+  }
+  return update;
 }

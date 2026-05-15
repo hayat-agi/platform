@@ -35,6 +35,13 @@ services:
       # Defaults to real classifier; set CLASSIFIER_MOCK=true in .env for
       # fast dev iteration without HF Hub download.
       CLASSIFIER_MOCK: ${CLASSIFIER_MOCK:-false}
+      # Remote classifier (HuggingFace Spaces or any /classify HTTP endpoint).
+      # When set, the fusion service POSTs each event to this URL instead of
+      # loading the BERTurk weights in-process — required on memory-constrained
+      # hosts. Mock fallback if the endpoint is unreachable.
+      CLASSIFIER_ENDPOINT_URL: ${CLASSIFIER_ENDPOINT_URL:-}
+      CLASSIFIER_ENDPOINT_TOKEN: ${CLASSIFIER_ENDPOINT_TOKEN:-}
+      CLASSIFIER_ENDPOINT_TIMEOUT_S: ${CLASSIFIER_ENDPOINT_TIMEOUT_S:-30}
       # HF Hub model distribution. If HF_MODEL_REPO is empty AND no local
       # MODEL_PATH file is mounted, the service falls back to mock with a
       # warning (see ai/hayat-agi-fusion/app/model_loader.py).

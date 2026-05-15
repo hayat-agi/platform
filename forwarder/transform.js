@@ -6,9 +6,13 @@
 
 /**
  * @param {object} alert  Mongoose Alert document (or plain object).
+ * @param {object|null} healthProfile  Optional snapshot of the source
+ *   user's medical profile (medicalConditions / medications / prosthetics
+ *   / bloodType). Caller resolves this from the User collection — this
+ *   module stays pure and DB-free.
  * @returns {object}      IngestPayload ready to POST to ai-fusion /ingest.
  */
-export function alertToIngestPayload(alert) {
+export function alertToIngestPayload(alert, healthProfile = null) {
   const messageId = String(alert._id);
   const text = alert.text ?? alert.payload?.message ?? "";
   // received_at = the time the *backend* accepted the alert (alert.createdAt).
@@ -33,7 +37,7 @@ export function alertToIngestPayload(alert) {
     gateway_location: { lat, lng },
     sender_pseudonym: senderPseudonym,
     lang: alert.lang ?? "tr",
-    health_profile: null,
+    health_profile: healthProfile,
   };
 }
 

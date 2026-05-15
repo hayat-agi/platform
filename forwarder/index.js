@@ -36,15 +36,50 @@ async function postToFusion(payload) {
   return res.json();
 }
 
-async function processAlert(alerts, alert) {
-  const payload = alertToIngestPayload(alert);
+// Look up the alert sender's medical profile snapshot. Returns null when
+// there's no source_user, or when the user exists but their profile is
+// entirely empty (treats empty as "no signal" so the AI scorer doesn't
+// waste a matrix walk on guaranteed-no-matches).
+async function resolveHealthProfile(users, alert) {
+  if (!alert.source_user) return null;
+  try {
+    const u = await users.findOne(
+      { _id: alert.source_user },
+      {
+        projection: {
+          _id: 0,
+          medicalConditions: 1,
+          medications: 1,
+          prosthetics: 1,
+          bloodType: 1,
+        },
+      },
+    );
+    if (!u) return null;
+    const hasAny =
+      (u.medicalConditions?.length ?? 0) > 0 ||
+      (u.medications?.length ?? 0) > 0 ||
+      (u.prosthetics?.length ?? 0) > 0 ||
+      (u.bloodType != null && u.bloodType !== "");
+    return hasAny ? u : null;
+  } catch (err) {
+    // Lookup failure shouldn't kill the alert — just process without the
+    // health enrichment.
+    console.warn(`[forwarder] health lookup for ${alert.source_user} failed:`, err.message);
+    return null;
+  }
+}
+
+async function processAlert(alerts, users, alert) {
+  const healthProfile = await resolveHealthProfile(users, alert);
+  const payload = alertToIngestPayload(alert, healthProfile);
   const response = await postToFusion(payload);
   const update = ingestResponseToAlertUpdate(response);
   await alerts.updateOne({ _id: alert._id }, { $set: update });
   return response.incident_id;
 }
 
-async function pollOnce(alerts) {
+async function pollOnce(alerts, users) {
   const cursor = alerts
     .find({ "classification.classified_at": null })
     .limit(BATCH_SIZE);
@@ -53,7 +88,7 @@ async function pollOnce(alerts) {
   let failed = 0;
   for await (const alert of cursor) {
     try {
-      const incidentId = await processAlert(alerts, alert);
+      const incidentId = await processAlert(alerts, users, alert);
       processed += 1;
       console.log(`[forwarder] alert ${alert._id} -> incident ${incidentId}`);
     } catch (err) {
@@ -70,6 +105,7 @@ async function main() {
   await client.connect();
   const db = client.db();
   const alerts = db.collection("alerts");
+  const users = db.collection("users");
   console.log(`[forwarder] polling every ${POLL_INTERVAL_MS}ms, AI=${AI_FUSION_URL}`);
 
   // Graceful shutdown.
@@ -86,7 +122,7 @@ async function main() {
 
   while (!stopping) {
     try {
-      const n = await pollOnce(alerts);
+      const n = await pollOnce(alerts, users);
       if (n > 0) console.log(`[forwarder] processed ${n} alerts`);
     } catch (err) {
       console.error("[forwarder] poll error:", err);
